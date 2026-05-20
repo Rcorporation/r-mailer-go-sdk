@@ -2,7 +2,7 @@
 
 Small Go client for R Mailer, RCorp's internal transactional email service.
 
-The SDK intentionally stays narrow for `v0.1.0`: it sends template emails and reads message records. It does not acquire OAuth tokens, retry requests, manage queues, or build templates.
+The SDK intentionally stays narrow for `v0.2.0`: it sends template emails, supports optional idempotency keys, and reads message records. It does not acquire OAuth tokens, retry requests, manage queues, or build templates.
 
 ## Installation
 
@@ -27,10 +27,11 @@ func main() {
 	mailer := rmailer.New("https://mailer.rcorp.cc")
 
 	msg, err := mailer.SendTemplate(ctx, "access-token", rmailer.SendTemplateRequest{
-		From:     "no-reply@rcorp.cc",
-		To:       []string{"user@example.com"},
-		Template: "identity.verify_email",
-		Locale:   "en",
+		From:           "no-reply@rcorp.cc",
+		To:             []string{"user@example.com"},
+		Template:       "identity.verify_email",
+		Locale:         "en",
+		IdempotencyKey: "kratos-courier-message-id",
 		Data: map[string]any{
 			"name":             "Sewon",
 			"code":             "123456",
@@ -86,10 +87,11 @@ func main() {
 
 	mailer := rmailer.New("https://mailer.rcorp.cc")
 	_, err = mailer.SendTemplate(ctx, token.AccessToken, rmailer.SendTemplateRequest{
-		From:     "no-reply@rcorp.cc",
-		To:       []string{"user@example.com"},
-		Template: "identity.password_reset",
-		Locale:   "en",
+		From:           "no-reply@rcorp.cc",
+		To:             []string{"user@example.com"},
+		Template:       "identity.password_reset",
+		Locale:         "en",
+		IdempotencyKey: "kratos-courier-message-id",
 		Data: map[string]any{
 			"name":      "Sewon",
 			"code":      "123456",
@@ -110,13 +112,16 @@ client := rmailer.New("https://mailer.rcorp.cc")
 
 ```go
 msg, err := client.SendTemplate(ctx, accessToken, rmailer.SendTemplateRequest{
-	From:     "no-reply@rcorp.cc",
-	To:       []string{"user@example.com"},
-	Template: "identity.verify_email",
-	Locale:   "en",
-	Data:     map[string]any{"name": "Sewon"},
+	From:           "no-reply@rcorp.cc",
+	To:             []string{"user@example.com"},
+	Template:       "identity.verify_email",
+	Locale:         "en",
+	Data:           map[string]any{"name": "Sewon"},
+	IdempotencyKey: "kratos-courier-message-id",
 })
 ```
+
+`IdempotencyKey` is optional, but strongly recommended for at-least-once dispatchers. R Mailer deduplicates by authenticated client and idempotency key, returning the existing message instead of sending a duplicate.
 
 ```go
 msg, err := client.GetMessage(ctx, accessToken, "message-id")
@@ -133,11 +138,11 @@ if errors.As(err, &apiErr) {
 }
 ```
 
-## Future v0.2+ Extension Points
+## Future Extension Points
 
 - Optional client configuration struct
 - Request/response metadata hooks
 - Lightweight retry policy for idempotent reads
 - Additional typed helpers for common R Identity templates
 
-Retries, queueing, template builders, provider integrations, and OAuth token acquisition are intentionally outside `v0.1.0`.
+Retries, queueing, template builders, provider integrations, and OAuth token acquisition are intentionally outside `v0.2.0`.

@@ -30,6 +30,66 @@ func TestSendTemplateSuccess(t *testing.T) {
 
 	client := New(server.URL)
 	msg, err := client.SendTemplate(context.Background(), "token-123", SendTemplateRequest{
+		From:           "no-reply@rcorp.cc",
+		To:             []string{"user@example.com"},
+		Template:       "identity.verify_email",
+		Locale:         "en",
+		Data:           map[string]any{"name": "Sewon"},
+		IdempotencyKey: "courier-message-id",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotAuth != "Bearer token-123" {
+		t.Fatalf("authorization = %q", gotAuth)
+	}
+	if gotReq.From != "no-reply@rcorp.cc" || gotReq.Template != "identity.verify_email" || gotReq.IdempotencyKey != "courier-message-id" {
+		t.Fatalf("request = %#v", gotReq)
+	}
+	if msg.ID != "msg-123" || msg.Status != "sent" {
+		t.Fatalf("message = %#v", msg)
+	}
+}
+
+func TestSendTemplateIncludesIdempotencyKeyWhenSet(t *testing.T) {
+	var got map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Fatal(err)
+		}
+		writeMessage(t, w, "msg-123")
+	}))
+	defer server.Close()
+
+	client := New(server.URL)
+	_, err := client.SendTemplate(context.Background(), "token-123", SendTemplateRequest{
+		From:           "no-reply@rcorp.cc",
+		To:             []string{"user@example.com"},
+		Template:       "identity.verify_email",
+		Locale:         "en",
+		Data:           map[string]any{"name": "Sewon"},
+		IdempotencyKey: "kratos-courier-message-id",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["idempotency_key"] != "kratos-courier-message-id" {
+		t.Fatalf("idempotency_key = %#v", got["idempotency_key"])
+	}
+}
+
+func TestSendTemplateOmitsEmptyIdempotencyKey(t *testing.T) {
+	var got map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Fatal(err)
+		}
+		writeMessage(t, w, "msg-123")
+	}))
+	defer server.Close()
+
+	client := New(server.URL)
+	_, err := client.SendTemplate(context.Background(), "token-123", SendTemplateRequest{
 		From:     "no-reply@rcorp.cc",
 		To:       []string{"user@example.com"},
 		Template: "identity.verify_email",
@@ -39,14 +99,8 @@ func TestSendTemplateSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotAuth != "Bearer token-123" {
-		t.Fatalf("authorization = %q", gotAuth)
-	}
-	if gotReq.From != "no-reply@rcorp.cc" || gotReq.Template != "identity.verify_email" {
-		t.Fatalf("request = %#v", gotReq)
-	}
-	if msg.ID != "msg-123" || msg.Status != "sent" {
-		t.Fatalf("message = %#v", msg)
+	if _, ok := got["idempotency_key"]; ok {
+		t.Fatalf("idempotency_key should be omitted when empty: %#v", got)
 	}
 }
 
@@ -138,6 +192,7 @@ func writeMessage(t *testing.T, w http.ResponseWriter, id string) {
 		Status:            "sent",
 		Provider:          "aws_ses",
 		ProviderMessageID: "ses-123",
+		IdempotencyKey:    "courier-message-id",
 		CreatedAt:         now,
 		SentAt:            now,
 	})

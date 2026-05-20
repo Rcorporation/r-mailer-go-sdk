@@ -32,11 +32,12 @@ func New(baseURL string) *Client {
 }
 
 type SendTemplateRequest struct {
-	From     string         `json:"from"`
-	To       []string       `json:"to"`
-	Template string         `json:"template"`
-	Locale   string         `json:"locale"`
-	Data     map[string]any `json:"data"`
+	From           string         `json:"from"`
+	To             []string       `json:"to"`
+	Template       string         `json:"template"`
+	Locale         string         `json:"locale"`
+	Data           map[string]any `json:"data"`
+	IdempotencyKey string         `json:"idempotency_key,omitempty"`
 }
 
 type Message struct {
@@ -52,6 +53,7 @@ type Message struct {
 	Status            string    `json:"status"`
 	Provider          string    `json:"provider"`
 	ProviderMessageID string    `json:"provider_message_id"`
+	IdempotencyKey    string    `json:"idempotency_key,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 	SentAt            time.Time `json:"sent_at"`
 }
