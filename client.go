@@ -54,6 +54,7 @@ type Message struct {
 	Provider          string    `json:"provider"`
 	ProviderMessageID string    `json:"provider_message_id"`
 	IdempotencyKey    string    `json:"idempotency_key,omitempty"`
+	Error             string    `json:"error,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 	SentAt            time.Time `json:"sent_at"`
 }

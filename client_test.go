@@ -49,6 +49,9 @@ func TestSendTemplateSuccess(t *testing.T) {
 	if msg.ID != "msg-123" || msg.Status != "sent" {
 		t.Fatalf("message = %#v", msg)
 	}
+	if msg.Error != "provider timeout" {
+		t.Fatalf("error = %q", msg.Error)
+	}
 }
 
 func TestSendTemplateIncludesIdempotencyKeyWhenSet(t *testing.T) {
@@ -193,6 +196,7 @@ func writeMessage(t *testing.T, w http.ResponseWriter, id string) {
 		Provider:          "aws_ses",
 		ProviderMessageID: "ses-123",
 		IdempotencyKey:    "courier-message-id",
+		Error:             "provider timeout",
 		CreatedAt:         now,
 		SentAt:            now,
 	})
